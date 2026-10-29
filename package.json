@@ -1,0 +1,24 @@
+{
+	"name": "stepglass",
+	"private": true,
+	"description": "See every step. Understand every change. Record, verify and check what AI agents actually did.",
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Aditya292248/stepGlass.git"
+	},
+	"type": "module",
+	"packageManager": "pnpm@10.24.0",
+	"engines": {
+		"node": ">=22.18"
+	},
+	"scripts": {
+		"build": "turbo run build",
+		"dev": "turbo run dev",
+		"typecheck": "turbo run typecheck"
+	},
+	"devDependencies": {
+		"turbo": "^2.11.10",
+		"typescript": "^7.0.2"
+	}
+}
