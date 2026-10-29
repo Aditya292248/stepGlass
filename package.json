@@ -15,9 +15,12 @@
 	"scripts": {
 		"build": "turbo run build",
 		"dev": "turbo run dev",
+		"format": "biome check --write .",
+		"lint": "biome check .",
 		"typecheck": "turbo run typecheck"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "2.6.4",
 		"turbo": "^2.11.10",
 		"typescript": "^7.0.2"
 	}
