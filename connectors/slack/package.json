@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/connector-slack",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Slack tools with a sandbox workspace and an opt-in live backend.",
+	"license": "Apache-2.0",
+	"type": "module"
+}
