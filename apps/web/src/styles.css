@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+/*
+ * Design tokens. Components only use the Tailwind names mapped in @theme below, so a theme is
+ * nothing more than a new set of these variables. Dark is the default; light applies when the
+ * system asks for it, unless the user picked a theme (`data-theme` on <html>).
+ */
+:root {
+	color-scheme: dark;
+	--surface: #0e1014;
+	--raised: #171a20;
+	--border: #2a2f38;
+	--text: #e6e8ec;
+	--muted: #949ba6;
+	--accent: #8aa4ff;
+	--pass: #4ac26b;
+	--fail: #f2635a;
+	--warn: #d9a23a;
+	--unknown: #9aa1ab;
+}
+
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme="dark"]) {
+		color-scheme: light;
+		--surface: #f6f7f9;
+		--raised: #ffffff;
+		--border: #d7dbe1;
+		--text: #15181d;
+		--muted: #59616d;
+		--accent: #3554d1;
+		--pass: #1a7f37;
+		--fail: #c9252d;
+		--warn: #8f5f00;
+		--unknown: #66707c;
+	}
+}
+
+:root[data-theme="light"] {
+	color-scheme: light;
+	--surface: #f6f7f9;
+	--raised: #ffffff;
+	--border: #d7dbe1;
+	--text: #15181d;
+	--muted: #59616d;
+	--accent: #3554d1;
+	--pass: #1a7f37;
+	--fail: #c9252d;
+	--warn: #8f5f00;
+	--unknown: #66707c;
+}
+
+@theme inline {
+	--color-surface: var(--surface);
+	--color-raised: var(--raised);
+	--color-border: var(--border);
+	--color-text: var(--text);
+	--color-muted: var(--muted);
+	--color-accent: var(--accent);
+	--color-pass: var(--pass);
+	--color-fail: var(--fail);
+	--color-warn: var(--warn);
+	--color-unknown: var(--unknown);
+	--font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+@layer base {
+	html,
+	body,
+	#root {
+		height: 100%;
+	}
+
+	body {
+		@apply bg-surface font-sans text-text antialiased;
+	}
+
+	*,
+	::before,
+	::after {
+		border-color: var(--border);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+}
