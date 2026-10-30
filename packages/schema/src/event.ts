@@ -10,6 +10,7 @@ import {
 	Uuidv7Schema,
 	VersionSchema,
 } from './common.js'
+import { SnapshotSchema } from './evidence.js'
 import { ClientInfoSchema, RunStatusSchema } from './session.js'
 
 /** Which recording path produced an event; `system` marks events the server wrote itself. */
@@ -106,6 +107,13 @@ export const ActionFinishedEventSchema = z.strictObject({
 		.optional(),
 })
 
+/** Carries one before/after snapshot; evidence is an event so it shares ordering and dedup. */
+export const EvidenceRecordedEventSchema = z.strictObject({
+	...base,
+	type: z.literal('evidence.recorded'),
+	snapshot: SnapshotSchema,
+})
+
 /** Records exactly which lesson text the agent saw, so its effect can be audited later. */
 export const LessonDeliveredEventSchema = z.strictObject({
 	...base,
@@ -136,6 +144,7 @@ export const TraceEventSchema = z.discriminatedUnion('type', [
 	SessionFinishedEventSchema,
 	ActionStartedEventSchema,
 	ActionFinishedEventSchema,
+	EvidenceRecordedEventSchema,
 	LessonDeliveredEventSchema,
 	RecordingGapEventSchema,
 ])

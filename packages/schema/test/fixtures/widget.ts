@@ -1,6 +1,6 @@
 // A neutral domain for tests: an agent recolors widget W-1. It reads it with `widget_get`, then
 // writes it with `widget_update`.
-import type { Session, TraceEvent } from '../../src/index.js'
+import type { Session, Snapshot, TraceEvent } from '../../src/index.js'
 
 /** Deterministic UUIDv7s: `id(1)`, `id(2)`, … */
 export const id = (n: number) => `0192f0a0-0000-7000-8000-${n.toString(16).padStart(12, '0')}`
@@ -9,6 +9,21 @@ export const SESSION_ID = id(1)
 export const GET_ACTION = id(2)
 export const UPDATE_ACTION = id(3)
 export const at = (sec: number) => `2026-10-29T12:00:${String(sec).padStart(2, '0')}Z`
+
+/** A W-1 snapshot for the update action; override fields per test. */
+export const snap = (over: Partial<Snapshot> = {}): Snapshot => ({
+	id: id(200),
+	actionId: UPDATE_ACTION,
+	object: { type: 'widget', id: 'W-1' },
+	phase: 'before',
+	state: { color: 'red', count: 3 },
+	capturedAt: at(3),
+	source: 'in_transaction',
+	...over,
+})
+
+export const beforeW1 = snap()
+export const afterW1 = snap({ id: id(201), phase: 'after', state: { color: 'blue', count: 3 } })
 
 export const session: Session = {
 	schemaVersion: 1,
@@ -61,6 +76,8 @@ export const events: TraceEvent[] = [
 		input: { id: 'W-1', color: 'blue' },
 	},
 	{ ...base(4, 4), type: 'action.finished', actionId: UPDATE_ACTION, status: 'succeeded' },
+	{ ...base(8, 4), type: 'evidence.recorded', snapshot: beforeW1 },
+	{ ...base(9, 4), type: 'evidence.recorded', snapshot: afterW1 },
 	{
 		...base(5, 5),
 		type: 'action.started',
