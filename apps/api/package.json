@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/api",
+	"version": "0.0.0",
+	"private": true,
+	"description": "HTTP API: event ingestion, sessions, checks and lessons.",
+	"license": "Apache-2.0",
+	"type": "module"
+}

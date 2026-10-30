@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/scenario-gmail-demo",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Demo: confidential pricing leaks into an external reply.",
+	"license": "Apache-2.0",
+	"type": "module"
+}

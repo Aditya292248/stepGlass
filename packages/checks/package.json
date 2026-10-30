@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/checks",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Deterministic three-valued check engine.",
+	"license": "Apache-2.0",
+	"type": "module"
+}
