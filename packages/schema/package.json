@@ -15,7 +15,8 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json",
+		"build": "tsc -p tsconfig.build.json && pnpm schemas:export",
+		"schemas:export": "node scripts/export-json-schemas.mjs",
 		"typecheck": "tsc -p . --noEmit",
 		"test": "vitest run"
 	},
