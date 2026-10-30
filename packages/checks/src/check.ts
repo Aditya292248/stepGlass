@@ -7,7 +7,7 @@ import {
 import { type EvalContext, evaluate } from './evaluate.js'
 import { deterministicUuidv7 } from './id.js'
 import type { Trace } from './trace.js'
-import { dedupe, type Reason, type Res, res, truthOf } from './value.js'
+import { dedupe, type ExpectedStep, type Reason, type Res, res, truthOf } from './value.js'
 
 const MAX_MESSAGE = 2000
 
@@ -40,6 +40,18 @@ export function evaluateAssertion(def: CheckDefinition, trace: Trace): Res {
  * engine exists to prevent.
  */
 export function evaluateCheck(definition: CheckDefinition, trace: Trace): CheckResult {
+	return inspectCheck(definition, trace).result
+}
+
+/** A result plus what the UI needs beyond it, such as "Expected, not recorded" rows. */
+export interface CheckInspection {
+	readonly result: CheckResult
+	/** Steps a sequence rule required that the recording lacks; empty on a pass. */
+	readonly expected: readonly ExpectedStep[]
+}
+
+/** {@link evaluateCheck}, keeping the structured detail a stored result cannot carry. */
+export function inspectCheck(definition: CheckDefinition, trace: Trace): CheckInspection {
 	const def = CheckDefinitionSchema.parse(definition)
 	const r = evaluateAssertion(def, trace)
 	const { outcome, reasons } = decide(def, r)
@@ -58,7 +70,8 @@ export function evaluateCheck(definition: CheckDefinition, trace: Trace): CheckR
 		evaluatedThroughSeq: trace.throughSeq,
 		evaluatedAt: new Date(trace.throughMs).toISOString(),
 	}
-	return CheckResultSchema.parse(result)
+	const parsed = CheckResultSchema.parse(result)
+	return { result: parsed, expected: parsed.outcome === 'pass' ? [] : r.expected }
 }
 
 function decide(def: CheckDefinition, r: Res): Pick<CheckResult, 'outcome' | 'reasons'> {

@@ -1,6 +1,7 @@
 import type { Expr, JsonValue } from '@stepglass/schema'
 import { and3, not3, or3, type Truth, UNKNOWN } from './logic.js'
 import { readSnapshot, selectEvents } from './selectors.js'
+import { forbiddenAfterUnless, requiredBefore } from './sequence.js'
 import type { Trace } from './trace.js'
 import {
 	describe,
@@ -72,7 +73,9 @@ export function evaluate(e: Expr, ctx: EvalContext): Res {
 		case 'snapshot':
 			return readSnapshot(e.object, e.phase, ctx)
 		case 'required_before':
+			return requiredBefore(e, ctx)
 		case 'forbidden_after_unless':
+			return forbiddenAfterUnless(e, ctx)
 		case 'only_changed':
 			return unknownRes('unsupported_operator', `"${e.op}" needs a recorded session.`)
 		default:

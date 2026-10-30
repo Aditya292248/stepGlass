@@ -8,6 +8,18 @@ export type Measurement = NonNullable<CheckResult['measurement']>
 /** A JSON value read from evidence, or {@link UNKNOWN} when the evidence does not say. */
 export type Value = JsonValue | Unknown
 
+/**
+ * A step a sequence rule expected but the recording does not contain, so the UI can draw an
+ * "Expected, not recorded" row in the timeline next to the action that needed it.
+ */
+export interface ExpectedStep {
+	/** The expected action, as selected: its tool, or its kind when no tool was named. */
+	readonly tool?: string
+	readonly kind?: 'tool' | 'model'
+	/** The action that should have been preceded by it. */
+	readonly before: { readonly actionId: string; readonly tool?: string; readonly eventId: string }
+}
+
 /** What every expression evaluates to: a value plus the evidence it rests on. */
 export interface Res {
 	readonly value: Value
@@ -20,6 +32,8 @@ export interface Res {
 	 * whose outcome was never observed). It can still decide a fail, never a pass.
 	 */
 	readonly unverified: readonly Reason[]
+	/** Expected steps that were not recorded; see {@link ExpectedStep}. */
+	readonly expected: readonly ExpectedStep[]
 	/** Per-element results for a list built from evidence, so quantifiers cite each element. */
 	readonly items?: readonly Res[]
 	/** The list is known to be incomplete: absent elements may exist that were not recorded. */
@@ -33,6 +47,7 @@ export interface ResExtra {
 	eventIds?: readonly string[]
 	reasons?: readonly Reason[]
 	unverified?: readonly Reason[]
+	expected?: readonly ExpectedStep[]
 	items?: readonly Res[]
 	partial?: boolean
 	measurement?: Measurement
@@ -46,6 +61,7 @@ export function res(value: Value, parts: readonly Res[] = [], extra: ResExtra = 
 		eventIds: dedupe([...parts.flatMap((p) => p.eventIds), ...(extra.eventIds ?? [])]),
 		reasons: [...parts.flatMap((p) => p.reasons), ...(extra.reasons ?? [])],
 		unverified: [...parts.flatMap((p) => p.unverified), ...(extra.unverified ?? [])],
+		expected: [...parts.flatMap((p) => p.expected), ...(extra.expected ?? [])],
 		...(extra.items ? { items: extra.items } : {}),
 		...(extra.partial ? { partial: true } : {}),
 		...(measurement ? { measurement } : {}),
