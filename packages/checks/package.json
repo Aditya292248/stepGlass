@@ -4,5 +4,22 @@
 	"private": true,
 	"description": "Deterministic three-valued check engine.",
 	"license": "Apache-2.0",
-	"type": "module"
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"typecheck": "tsc -p . --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@stepglass/schema": "workspace:*"
+	}
 }
