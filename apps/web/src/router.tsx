@@ -3,6 +3,7 @@ import {
 	createRootRouteWithContext,
 	createRoute,
 	createRouter,
+	lazyRouteComponent,
 	type RouterHistory,
 } from '@tanstack/react-router'
 import { IndexPage } from './routes/index'
@@ -23,7 +24,19 @@ export const runRoute = createRoute({
 	component: RunPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, runRoute])
+// Dev-only gallery. `import.meta.env.DEV` is a build-time constant, so production bundles drop
+// both the route and the lazily imported page.
+const devRoutes = import.meta.env.DEV
+	? [
+			createRoute({
+				getParentRoute: () => rootRoute,
+				path: '/_primitives',
+				component: lazyRouteComponent(() => import('./routes/primitives'), 'PrimitivesPage'),
+			}),
+		]
+	: []
+
+const routeTree = rootRoute.addChildren([indexRoute, runRoute, ...devRoutes])
 
 export function createQueryClient(): QueryClient {
 	return new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } })

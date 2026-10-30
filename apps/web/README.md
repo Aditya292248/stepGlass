@@ -46,3 +46,28 @@ Mono (`font-mono`) for data such as IDs, tool names and numbers.
 Dark is the default. With no saved choice the app follows `prefers-color-scheme`; the theme toggle
 saves an explicit choice in `localStorage` (`stepglass:theme`) and sets `data-theme` on `<html>`.
 If storage is unavailable the choice applies until the page is reloaded.
+
+## Routes
+
+| Path              | Page                                                           |
+| ----------------- | -------------------------------------------------------------- |
+| `/`               | The shell with no run selected                                 |
+| `/runs/$publicId` | One run, selected in the RUNS sidebar                          |
+| `/_primitives`    | Dev-only gallery of the primitives below (not in `vite build`) |
+
+## Primitives
+
+- `EvidenceTag`: verified, lesson, agent claim, missing, recorded, unknown. Each has a glyph and a
+  word as well as a colour; `evidenceTagKind()` maps the schema's `EvidenceLabel` to a tag.
+- `ToolChip`: `@tool_name` as a button; `onSelect(name)` fires on click, Enter or Space.
+- `ThresholdGauge`: takes a check result's `Measurement` and shows its terms as a sum
+  ("150 earlier + 90 now = 240"), a limit marker and an optional approval marker. Values are
+  formatted per unit with `Intl`: `count` as a grouped number, `currency_minor` scaled by the
+  currency's minor-unit digits, `basis_points` as a percentage. A missing measurement shows "—".
+
+## Keyboard
+
+- Ctrl+K (Cmd+K on macOS) focuses the jump field; Escape leaves it.
+- The RUNS list is a single tab stop: arrow keys, Home and End move between runs, Enter opens one.
+- Below the `md` breakpoint the sidebar lives in a drawer opened from the title bar; Escape closes
+  it and focus returns to the menu button.
