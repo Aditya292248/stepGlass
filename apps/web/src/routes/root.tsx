@@ -1,16 +1,18 @@
 import { Outlet } from '@tanstack/react-router'
-import { ThemeToggle } from '../components/theme-toggle'
+import { AppShell } from '../components/app-shell'
+import { connectionFixture } from '../fixtures/connection'
 
 export function RootLayout() {
 	return (
-		<div className="flex h-full flex-col">
-			<header className="flex h-12 items-center justify-between border-b px-4">
-				<span className="font-semibold text-sm">Stepglass</span>
-				<ThemeToggle />
-			</header>
-			<main className="min-h-0 flex-1">
-				<Outlet />
-			</main>
-		</div>
+		<AppShell
+			status={connectionFixture}
+			sidebar={
+				<h2 className="p-4 font-semibold text-[11px] text-muted uppercase tracking-[0.08em]">
+					Runs
+				</h2>
+			}
+		>
+			<Outlet />
+		</AppShell>
 	)
 }
