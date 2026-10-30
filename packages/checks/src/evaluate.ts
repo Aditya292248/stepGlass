@@ -1,5 +1,7 @@
 import type { Expr, JsonValue } from '@stepglass/schema'
 import { and3, not3, or3, type Truth, UNKNOWN } from './logic.js'
+import { readSnapshot, selectEvents } from './selectors.js'
+import type { Trace } from './trace.js'
 import {
 	describe,
 	getPath,
@@ -11,9 +13,11 @@ import {
 	unknownRes,
 } from './value.js'
 
-/** What an expression can see: variables bound by the caller or by a quantifier. */
+/** What an expression can see: variables bound by the caller or a quantifier, and the session. */
 export interface EvalContext {
 	readonly vars: ReadonlyMap<string, Res>
+	/** Absent when evaluating outside a session; session operators are then unknown. */
+	readonly trace?: Trace
 }
 
 /** An empty context, for expressions that read only literals. */
@@ -64,7 +68,9 @@ export function evaluate(e: Expr, ctx: EvalContext): Res {
 		case 'any':
 			return quantify(e.op, evaluate(e.in, ctx), e.as, e.test, ctx)
 		case 'events':
+			return selectEvents(e.where, ctx)
 		case 'snapshot':
+			return readSnapshot(e.object, e.phase, ctx)
 		case 'required_before':
 		case 'forbidden_after_unless':
 		case 'only_changed':

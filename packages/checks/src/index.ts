@@ -1,3 +1,7 @@
+export * from './check.js'
 export * from './evaluate.js'
+export * from './id.js'
 export * from './logic.js'
+export * from './selectors.js'
+export * from './trace.js'
 export * from './value.js'

@@ -15,6 +15,11 @@ export interface Res {
 	readonly eventIds: readonly string[]
 	/** Why the value is unknown or false, carried up to the result's reasons. */
 	readonly reasons: readonly Reason[]
+	/**
+	 * Evidence the value read that is weaker than verified (the tool's own report, or a write
+	 * whose outcome was never observed). It can still decide a fail, never a pass.
+	 */
+	readonly unverified: readonly Reason[]
 	/** Per-element results for a list built from evidence, so quantifiers cite each element. */
 	readonly items?: readonly Res[]
 	/** The list is known to be incomplete: absent elements may exist that were not recorded. */
@@ -27,6 +32,7 @@ export interface Res {
 export interface ResExtra {
 	eventIds?: readonly string[]
 	reasons?: readonly Reason[]
+	unverified?: readonly Reason[]
 	items?: readonly Res[]
 	partial?: boolean
 	measurement?: Measurement
@@ -39,6 +45,7 @@ export function res(value: Value, parts: readonly Res[] = [], extra: ResExtra = 
 		value,
 		eventIds: dedupe([...parts.flatMap((p) => p.eventIds), ...(extra.eventIds ?? [])]),
 		reasons: [...parts.flatMap((p) => p.reasons), ...(extra.reasons ?? [])],
+		unverified: [...parts.flatMap((p) => p.unverified), ...(extra.unverified ?? [])],
 		...(extra.items ? { items: extra.items } : {}),
 		...(extra.partial ? { partial: true } : {}),
 		...(measurement ? { measurement } : {}),
