@@ -1,5 +1,7 @@
-import Fastify, { type FastifyServerOptions } from 'fastify'
+import swagger from '@fastify/swagger'
+import Fastify, { type FastifyServerOptions, type onRouteHookHandler } from 'fastify'
 import {
+	jsonSchemaTransform,
 	serializerCompiler,
 	validatorCompiler,
 	type ZodTypeProvider,
@@ -16,6 +18,8 @@ export interface AppOptions {
 	/** Pino options, or false to disable logging. Redaction is always added. */
 	logger?: Exclude<FastifyServerOptions['logger'], true> | undefined
 	ingestBodyLimit?: number
+	/** Observes every route as it is registered (route listings, coverage tests). */
+	onRoute?: onRouteHookHandler
 }
 
 /** Paths pino blanks out, so a bearer token never reaches a log line. */
@@ -38,6 +42,30 @@ export async function buildApp(options: AppOptions) {
 	app.setSerializerCompiler(serializerCompiler)
 	app.setErrorHandler(problemErrorHandler)
 	app.setNotFoundHandler((_request, reply) => sendProblem(reply, 404, 'not_found'))
+	if (options.onRoute) app.addHook('onRoute', options.onRoute)
+
+	// Registered before the routes so its onRoute hook sees every one of them.
+	await app.register(swagger, {
+		openapi: {
+			openapi: '3.1.0',
+			info: {
+				title: 'Stepglass API',
+				version: '0.0.0',
+				description: 'Event ingestion and session read API.',
+			},
+			components: {
+				securitySchemes: {
+					sessionToken: {
+						type: 'http',
+						scheme: 'bearer',
+						description: 'The `sgt_…` token returned once by `POST /v1/sessions`.',
+					},
+				},
+			},
+		},
+		transform: jsonSchemaTransform,
+	})
+	app.get('/openapi.json', { schema: { hide: true } }, () => app.swagger())
 
 	await app.register(healthRoutes, { db: options.db })
 	await app.register(sessionRoutes, { db: options.db })
