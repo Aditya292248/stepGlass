@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/scenario-slack-demo",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Demo: confidential numbers posted to an externally shared channel.",
+	"license": "Apache-2.0",
+	"type": "module"
+}

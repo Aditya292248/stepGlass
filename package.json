@@ -1,0 +1,30 @@
+{
+	"name": "stepglass",
+	"private": true,
+	"description": "See every step. Understand every change. Record, verify and check what AI agents actually did.",
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Aditya292248/stepGlass.git"
+	},
+	"type": "module",
+	"packageManager": "pnpm@10.24.0",
+	"engines": {
+		"node": ">=22.18"
+	},
+	"scripts": {
+		"build": "turbo run build",
+		"dev": "turbo run dev",
+		"format": "biome check --write .",
+		"lint": "biome check . && pnpm --filter @stepglass/tooling-boundaries check",
+		"test": "turbo run test",
+		"typecheck": "turbo run typecheck"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.6.4",
+		"@types/node": "^24.19.2",
+		"turbo": "^2.11.10",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.5"
+	}
+}

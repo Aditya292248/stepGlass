@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/toolkit",
+	"version": "0.0.0",
+	"private": true,
+	"description": "defineTool(): recorded tools with snapshots and read-back verification.",
+	"license": "Apache-2.0",
+	"type": "module"
+}

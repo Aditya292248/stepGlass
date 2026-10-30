@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/mcp-server",
+	"version": "0.0.0",
+	"private": true,
+	"description": "MCP host that serves connector tools with session recording.",
+	"license": "Apache-2.0",
+	"type": "module"
+}
