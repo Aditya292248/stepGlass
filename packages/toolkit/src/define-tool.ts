@@ -1,4 +1,5 @@
 import {
+	type JsonObject,
 	type JsonValue,
 	type Slug,
 	SlugSchema,
@@ -8,7 +9,7 @@ import {
 import type { z } from 'zod'
 import { type Capture, capturePayload, toJson } from './capture.js'
 import type { DefinedTool, Recorder, ToolContext } from './contract.js'
-import { computedFieldsOf, objectIdAt, snapshotDraft } from './evidence.js'
+import { computedFieldsOf, jsonEqual, objectIdAt, snapshotDraft } from './evidence.js'
 import { type ObjectState, type OutboxEntry, type OutboxStore, relayOutbox } from './store.js'
 
 /** What a tool's `run` receives besides its input. */
@@ -33,6 +34,25 @@ export interface TransactionHooks<Tx> {
 	readonly computedFields?: readonly string[]
 }
 
+/**
+ * Verification for writes to a system Stepglass does not own (a third-party API): the object is
+ * read before `run` and re-read from the system of record after it. The re-read only counts when
+ * it shows the change `expect` names; otherwise no verified pair is recorded.
+ */
+export interface ReadBackHooks<I, O> {
+	/** Reads the object from the system of record; `null` when it does not exist. A throw is a failed read. */
+	read(objectId: string, ctx: { signal?: AbortSignal }): Promise<ObjectState | null>
+	/** The state fields a successful write must show. An empty object confirms nothing. */
+	expect(input: I, output: O): JsonObject
+	/** The state the tool's own response claims; recorded as `tool_reported` when the re-read can't confirm the write. */
+	reported?(input: I, output: O): JsonObject | undefined
+	/** Re-reads for eventually consistent APIs (default 3) and the pause between them (default 200 ms). */
+	readonly attempts?: number
+	readonly retryDelayMs?: number
+	/** State fields the system derives; defaults to the descriptor's `computed` state fields. */
+	readonly computedFields?: readonly string[]
+}
+
 /** Everything `defineTool` needs to record and run one tool. */
 export interface ToolSpec<I, O extends JsonValue, Tx = undefined> {
 	readonly name: Slug
@@ -43,6 +63,7 @@ export interface ToolSpec<I, O extends JsonValue, Tx = undefined> {
 	readonly output?: z.ZodType<O>
 	readonly descriptor: ToolDescriptor
 	readonly transaction?: TransactionHooks<Tx>
+	readonly readBack?: ReadBackHooks<I, O>
 	run(input: I, ctx: RunContext<Tx>): Promise<O>
 }
 
@@ -69,6 +90,8 @@ export class ToolOutputError extends Error {
 }
 
 const MAX_ERROR_MESSAGE = 10_000
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function describeError(err: unknown): { message: string; code?: string } {
 	const message = (err instanceof Error ? err.message : String(err)).slice(0, MAX_ERROR_MESSAGE)
@@ -178,10 +201,81 @@ export function defineTool<I, O extends JsonValue, Tx = undefined>(
 		return result
 	}
 
-	const execute = (input: I, base: Omit<RunContext<Tx>, 'tx'>): Promise<O> =>
-		spec.transaction
-			? inTransaction(spec.transaction, input, base)
-			: invoke(input, { ...base, tx: undefined as Tx })
+	/**
+	 * Reads the object before `run` and re-reads it after a successful one. A read that throws,
+	 * finds nothing, or never shows the expected change (after all attempts, or with an unchanged
+	 * version) yields no `read_back` after snapshot: at most the tool's own claim, marked
+	 * `tool_reported`, so the label can never say verified on the tool's word alone. A failed run is
+	 * not re-read, so it has no pair and stays `unknown`.
+	 */
+	async function withReadBack(
+		hooks: ReadBackHooks<I, O>,
+		input: I,
+		base: Omit<RunContext<Tx>, 'tx'>,
+	): Promise<O> {
+		const { actionId, recorder, signal } = base
+		const object = descriptor.object
+		const computedFields = computedFieldsOf(descriptor, hooks.computedFields)
+		const read = async (id: string) => {
+			try {
+				return await hooks.read(id, signal ? { signal } : {})
+			} catch {
+				return null
+			}
+		}
+		const emit = (
+			objectId: string,
+			phase: 'before' | 'after',
+			observed: ObjectState,
+			source: 'read_back' | 'tool_reported',
+		) =>
+			recorder.emit(
+				snapshotDraft(recorder, descriptor, {
+					actionId,
+					objectId,
+					phase,
+					observed,
+					source,
+					computedFields,
+				}),
+			)
+
+		const inputId = object && objectIdAt(object.idPath, { input })
+		const before = inputId === undefined ? null : await read(inputId)
+		if (inputId !== undefined && before) emit(inputId, 'before', before, 'read_back')
+
+		const out = await invoke(input, { ...base, tx: undefined as Tx })
+		const id = inputId ?? (object && objectIdAt(object.idPath, { output: out }))
+		if (id === undefined) return out
+
+		const expected = hooks.expect(input, out)
+		const shows = (s: ObjectState) => {
+			const keys = Object.keys(expected)
+			if (keys.length === 0) return false
+			if (!keys.every((k) => jsonEqual(s.state[k], expected[k]))) return false
+			// An unchanged version means the read is stale, unless no change was expected at all.
+			const changeExpected = !before || !keys.every((k) => jsonEqual(before.state[k], expected[k]))
+			return !(changeExpected && before?.version !== undefined && before.version === s.version)
+		}
+		const attempts = Math.max(1, hooks.attempts ?? 3)
+		for (let attempt = 1; attempt <= attempts; attempt++) {
+			const after = await read(id)
+			if (after && shows(after)) {
+				emit(id, 'after', after, 'read_back')
+				return out
+			}
+			if (attempt < attempts) await sleep(hooks.retryDelayMs ?? 200)
+		}
+		const claimed = hooks.reported?.(input, out)
+		if (claimed) emit(id, 'after', { state: claimed }, 'tool_reported')
+		return out
+	}
+
+	const execute = (input: I, base: Omit<RunContext<Tx>, 'tx'>): Promise<O> => {
+		if (spec.transaction) return inTransaction(spec.transaction, input, base)
+		if (spec.readBack) return withReadBack(spec.readBack, input, base)
+		return invoke(input, { ...base, tx: undefined as Tx })
+	}
 
 	async function call(rawInput: unknown, ctx: ToolContext): Promise<JsonValue> {
 		const { recorder, signal } = ctx

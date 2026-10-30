@@ -1,4 +1,4 @@
-import type { JsonObject, SnapshotSource, ToolDescriptor } from '@stepglass/schema'
+import type { JsonObject, JsonValue, SnapshotSource, ToolDescriptor } from '@stepglass/schema'
 import { capturePayload } from './capture.js'
 import type { EventDraft, Recorder } from './contract.js'
 import type { ObjectState } from './store.js'
@@ -18,6 +18,19 @@ export function objectIdAt(idPath: string, payloads: { input?: unknown; output?:
 	if (typeof value === 'string' && value.length > 0) return value
 	if (typeof value === 'number' && Number.isSafeInteger(value)) return String(value)
 	return undefined
+}
+
+/** Structural JSON equality; object key order does not matter. */
+export function jsonEqual(a: JsonValue | undefined, b: JsonValue | undefined): boolean {
+	if (a === b) return true
+	if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false
+	if (Array.isArray(a) || Array.isArray(b)) {
+		if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false
+		return a.every((v, i) => jsonEqual(v, b[i]))
+	}
+	const keys = Object.keys(a)
+	if (keys.length !== Object.keys(b).length) return false
+	return keys.every((k) => Object.hasOwn(b, k) && jsonEqual(a[k], b[k]))
 }
 
 /**

@@ -1,5 +1,10 @@
 // A neutral domain for tests: widgets with a color, a count and an access code.
-import { type ToolDescriptor, type TraceEvent, TraceEventSchema } from '@stepglass/schema'
+import {
+	type JsonObject,
+	type ToolDescriptor,
+	type TraceEvent,
+	TraceEventSchema,
+} from '@stepglass/schema'
 import { expect } from 'vitest'
 import { z } from 'zod'
 import { createMemoryRecorder, defineTool, MemoryStore } from '../../src/index.js'
@@ -141,6 +146,71 @@ export function createWidget(store: MemoryStore) {
 			const id = `W-${next++}`
 			tx.put('widget', id, { color, count: 0 })
 			return { id }
+		},
+	})
+}
+
+/**
+ * A stand-in for a third-party widget API the connector does not own. It can lag behind its
+ * writes (the first `staleReads` reads after a write return the old state), fail reads, or
+ * acknowledge writes it then drops.
+ */
+export class WidgetApi {
+	readonly #widgets = new Map<string, { state: JsonObject; version: number }>()
+	readonly #previous = new Map<string, { state: JsonObject; version: number }>()
+	#lagging = 0
+	staleReads = 0
+	readsFail = false
+	dropsWrites = false
+	writesFail = false
+
+	constructor(seedState: Record<string, JsonObject> = { 'W-1': { color: 'red', count: 3 } }) {
+		for (const [id, state] of Object.entries(seedState))
+			this.#widgets.set(id, { state, version: 1 })
+	}
+
+	async get(id: string) {
+		if (this.readsFail) throw new Error('read timed out')
+		const row = this.#lagging > 0 ? this.#previous.get(id) : this.#widgets.get(id)
+		if (this.#lagging > 0) this.#lagging -= 1
+		return row ? { state: structuredClone(row.state), version: `v${row.version}` } : null
+	}
+
+	async patch(id: string, fields: JsonObject) {
+		if (this.writesFail) throw new Error('503 from upstream')
+		const row = this.#widgets.get(id)
+		if (!row) throw new Error(`no widget ${id}`)
+		const next = { state: { ...row.state, ...fields }, version: row.version + 1 }
+		if (!this.dropsWrites) {
+			this.#previous.set(id, row)
+			this.#widgets.set(id, next)
+			this.#lagging = this.staleReads
+		}
+		return { id, ...next.state }
+	}
+}
+
+export const paintWidgetDescriptor: ToolDescriptor = {
+	...setWidgetColorDescriptor,
+	tool: 'paint_widget',
+	verification: 'read_back',
+}
+
+/** Recolors a widget through {@link WidgetApi}, verified by reading it back. */
+export function paintWidget(api: WidgetApi, opts: { reported?: boolean } = {}) {
+	return defineTool({
+		name: 'paint_widget',
+		description: 'Paint a widget through the widget API.',
+		input: z.object({ id: z.string(), color: z.string() }),
+		descriptor: paintWidgetDescriptor,
+		// `run` comes before the hooks so TypeScript infers the output type the hooks receive.
+		run: ({ id, color }) => api.patch(id, { color }) as Promise<{ id: string; color: string }>,
+		readBack: {
+			read: (id) => api.get(id),
+			expect: (input) => ({ color: input.color }),
+			reported: opts.reported === false ? undefined : (_, out) => ({ color: out.color }),
+			attempts: 3,
+			retryDelayMs: 1,
 		},
 	})
 }
