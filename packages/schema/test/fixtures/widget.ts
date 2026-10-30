@@ -1,6 +1,14 @@
 // A neutral domain for tests: an agent recolors widget W-1. It reads it with `widget_get`, then
 // writes it with `widget_update`.
-import type { Session, Snapshot, TraceEvent } from '../../src/index.js'
+import type {
+	CheckBundle,
+	CheckResult,
+	Lesson,
+	Session,
+	Snapshot,
+	ToolDescriptor,
+	TraceEvent,
+} from '../../src/index.js'
 
 /** Deterministic UUIDv7s: `id(1)`, `id(2)`, … */
 export const id = (n: number) => `0192f0a0-0000-7000-8000-${n.toString(16).padStart(12, '0')}`
@@ -109,3 +117,118 @@ export const events: TraceEvent[] = [
 		reply: { text: 'Done.', via: 'finish_session' },
 	},
 ]
+
+const tool = (name: string) => ({ op: 'events', where: { type: 'tool', tool: name } }) as const
+
+export const bundle: CheckBundle = {
+	schemaVersion: 1,
+	id: 'widget-policy',
+	version: 1,
+	checks: [
+		{
+			schemaVersion: 1,
+			id: 'count-limit',
+			version: 1,
+			title: 'Kept the widget count at or under 10',
+			severity: 'error',
+			assert: {
+				op: 'lte',
+				left: {
+					op: 'get',
+					of: {
+						op: 'snapshot',
+						object: { type: 'widget', id: { op: 'lit', value: 'W-1' } },
+						phase: 'after',
+					},
+					path: ['count'],
+				},
+				right: { op: 'lit', value: 10 },
+				measure: {
+					label: 'Widget count',
+					unit: 'count',
+					terms: [{ label: 'Limit', value: { op: 'lit', value: 10 } }],
+				},
+			},
+		},
+		{
+			schemaVersion: 1,
+			id: 'read-before-write',
+			version: 1,
+			title: 'Read the widget before updating it',
+			severity: 'warning',
+			assert: { op: 'required_before', first: tool('widget_get'), second: tool('widget_update') },
+		},
+		{
+			schemaVersion: 1,
+			id: 'only-w1',
+			version: 1,
+			title: 'Changed only widget W-1',
+			severity: 'error',
+			assert: {
+				op: 'only_changed',
+				objects: [{ type: 'widget', id: { op: 'lit', value: 'W-1' } }],
+			},
+		},
+	],
+}
+
+export const passResult: CheckResult = {
+	schemaVersion: 1,
+	id: id(300),
+	sessionId: SESSION_ID,
+	checkId: 'count-limit',
+	checkVersion: 1,
+	outcome: 'pass',
+	reasons: [{ code: 'within_limit', message: 'Count 3 is at most 10.', eventIds: [id(109)] }],
+	measurement: { value: 3, limit: 10, unit: 'count', terms: [{ label: 'Limit', value: 10 }] },
+	evaluatedThroughSeq: 10,
+	evaluatedAt: at(9),
+}
+
+export const widgetGet: ToolDescriptor = {
+	schemaVersion: 1,
+	tool: 'widget_get',
+	version: 1,
+	kind: 'read',
+	title: 'Looked up widget {input.id|id}',
+	fields: { 'input.id': { label: 'Widget', format: 'id' } },
+	verification: 'none',
+	capture: { input: 'full', output: 'full' },
+}
+
+export const widgetUpdate: ToolDescriptor = {
+	schemaVersion: 1,
+	tool: 'widget_update',
+	version: 1,
+	kind: 'write',
+	title: 'Recolored {input.id} from {before.color} to {after.color}',
+	description: 'Count stays {{unchanged}} at {after.count|integer}',
+	object: { type: 'widget', idPath: 'input.id', label: 'Widget {input.id}' },
+	fields: {
+		'before.color': { label: 'Old color', format: 'text' },
+		'after.color': { label: 'New color', format: 'text' },
+		'after.count': { label: 'Count', format: 'integer', computed: true },
+	},
+	verification: 'in_transaction',
+	capture: { input: 'full', output: 'metadata_only' },
+}
+
+export const lesson: Lesson = {
+	schemaVersion: 1,
+	id: 'L-1',
+	version: 1,
+	text: 'Read the widget before updating it.',
+	source: { checkId: 'read-before-write', sessionId: SESSION_ID },
+	condition: {
+		tool: 'widget_update',
+		when: {
+			op: 'eq',
+			left: { op: 'var', name: 'agent' },
+			right: { op: 'lit', value: 'widget-agent' },
+		},
+	},
+	scope: { agent: 'widget-agent' },
+	delivery: { mode: 'pre_call_guard', attachTo: 'widget_update' },
+	status: 'active',
+	createdAt: at(9),
+}
