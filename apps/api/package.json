@@ -4,5 +4,25 @@
 	"private": true,
 	"description": "HTTP API: event ingestion, sessions, checks and lessons.",
 	"license": "Apache-2.0",
-	"type": "module"
+	"type": "module",
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"typecheck": "tsc -p . --noEmit",
+		"test": "vitest run",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "node --env-file-if-exists=../../.env dist/migrate.js"
+	},
+	"dependencies": {
+		"@fastify/swagger": "9.9.2",
+		"@stepglass/schema": "workspace:*",
+		"drizzle-orm": "0.45.4",
+		"fastify": "5.12.7",
+		"fastify-type-provider-zod": "7.0.0",
+		"pg": "8.23.1",
+		"zod": "4.6.7"
+	},
+	"devDependencies": {
+		"@types/pg": "8.23.1",
+		"drizzle-kit": "0.31.11"
+	}
 }

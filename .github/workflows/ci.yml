@@ -17,6 +17,23 @@ jobs:
     name: Lint, typecheck, test
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: stepglass
+          POSTGRES_PASSWORD: stepglass
+          POSTGRES_DB: stepglass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stepglass -d stepglass"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Integration tests create and drop their own databases on this server.
+      DATABASE_URL: postgres://stepglass:stepglass@localhost:5432/stepglass
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
