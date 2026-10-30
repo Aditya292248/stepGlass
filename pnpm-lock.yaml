@@ -36,7 +36,11 @@ importers:
 
   connectors/stripe: {}
 
-  packages/checks: {}
+  packages/checks:
+    dependencies:
+      '@stepglass/schema':
+        specifier: workspace:*
+        version: link:../schema
 
   packages/mcp-server: {}
 
