@@ -6,7 +6,10 @@ import {
 } from 'fastify-type-provider-zod'
 import type { Db } from './db/client.js'
 import { problemErrorHandler, sendProblem } from './problem.js'
+import { documentRoutes } from './routes/documents.js'
 import { eventRoutes } from './routes/events.js'
+import { healthRoutes } from './routes/health.js'
+import { sessionRoutes } from './routes/sessions.js'
 
 export interface AppOptions {
 	db: Db
@@ -36,9 +39,12 @@ export async function buildApp(options: AppOptions) {
 	app.setErrorHandler(problemErrorHandler)
 	app.setNotFoundHandler((_request, reply) => sendProblem(reply, 404, 'not_found'))
 
+	await app.register(healthRoutes, { db: options.db })
+	await app.register(sessionRoutes, { db: options.db })
 	await app.register(eventRoutes, {
 		db: options.db,
 		bodyLimit: options.ingestBodyLimit ?? 4 * 1024 * 1024,
 	})
+	await app.register(documentRoutes, { db: options.db })
 	return app
 }
