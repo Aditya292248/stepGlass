@@ -75,5 +75,6 @@ describe('ingestion', () => {
 			accepted: [id(100)],
 			duplicates: [id(101)],
 			rejected: [{ id: 'nope', code: 'invalid', message: 'bad id' }],
+			gaps: [{ producerId: 'p1', fromSeq: 3, toSeq: 5 }],
 		}))
 })

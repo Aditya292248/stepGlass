@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Uuidv7Schema } from './common.js'
+import { SafeIntSchema, Uuidv7Schema } from './common.js'
 import { TraceEventSchema } from './event.js'
 
 /** Upper bound on one batch, so a single request has bounded memory and transaction size. */
@@ -26,6 +26,18 @@ export const EventBatchAckSchema = z.strictObject({
 			id: z.string(),
 			code: z.enum(['invalid', 'conflict', 'unknown_session']),
 			message: z.string(),
+		}),
+	),
+	/**
+	 * Holes in each producer's `seq` (counting from 0) that are still open after this batch, for
+	 * every producer the batch touched. A later batch can fill a hole; a producer that knows the
+	 * events are lost should record a `recording.gap` event for the range.
+	 */
+	gaps: z.array(
+		z.strictObject({
+			producerId: z.string(),
+			fromSeq: SafeIntSchema.min(0),
+			toSeq: SafeIntSchema.min(0),
 		}),
 	),
 })
