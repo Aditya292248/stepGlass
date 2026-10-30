@@ -41,7 +41,8 @@ Session   one agent run toward one goal
   | Token     | `sgt_` + 256 random bits | the client that opened the session, once | Bearer secret to append events; only its SHA-256 is stored |
 
 - **Action**: one step. It is not stored as a row of its own; it is the group of events that share
-  an `actionId`. `parentActionId` nests sub-steps.
+  an `actionId`. `parentActionId` nests sub-steps. `replayOf` marks an idempotent retry that was
+  answered with an earlier action's result instead of running again.
 - **Event**: the unit of the append-only log. Nothing is updated in place; an outcome is a new
   event. Each event has a client-generated UUIDv7 `id` (the idempotency key), a per-producer
   `producer.seq`, and, once stored, a server-assigned `seq` that is dense and ordered within the

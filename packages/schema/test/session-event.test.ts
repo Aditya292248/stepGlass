@@ -51,6 +51,11 @@ describe('trace events', () => {
 		).toBe(false)
 	})
 
+	it('accepts a replayed action.started that names the original action', () => {
+		roundTrip(TraceEventSchema, { ...events[3], id: id(150), replayOf: id(3) })
+		expect(TraceEventSchema.safeParse({ ...events[3], replayOf: 'nope' }).success).toBe(false)
+	})
+
 	it('rejects session.finished with status running', () => {
 		expect(TraceEventSchema.safeParse({ ...events.at(-1), status: 'running' }).success).toBe(false)
 	})
