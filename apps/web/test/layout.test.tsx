@@ -70,7 +70,8 @@ describe('shell', () => {
 	it('opens the runs drawer from the menu button', async () => {
 		await renderApp('/')
 		await userEvent.click(screen.getByRole('button', { name: 'Open runs' }))
-		expect(screen.getByRole('dialog', { name: 'Runs' })).toBeInTheDocument()
+		const drawer = screen.getByRole('dialog', { name: 'Runs' })
+		expect(within(drawer).getAllByRole('link')[0]).toHaveFocus()
 		await userEvent.keyboard('{Escape}')
 		expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 	})

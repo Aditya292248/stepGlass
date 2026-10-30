@@ -34,7 +34,18 @@ export function AppShell({ sidebar, status, children }: AppShellProps) {
 						</SheetTrigger>
 					}
 				/>
-				<SheetContent>
+				<SheetContent
+					onOpenAutoFocus={(event) => {
+						// Land on the list's tab stop (the selected run) so arrow keys work at once.
+						const row =
+							event.currentTarget instanceof HTMLElement
+								? event.currentTarget.querySelector<HTMLElement>('a[tabindex="0"]')
+								: null
+						if (!row) return
+						event.preventDefault()
+						row.focus()
+					}}
+				>
 					<SheetTitle>Runs</SheetTitle>
 					<SheetDescription>Pick a run to review.</SheetDescription>
 					{sidebar}
