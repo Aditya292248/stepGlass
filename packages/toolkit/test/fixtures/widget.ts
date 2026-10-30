@@ -2,7 +2,7 @@
 import { type ToolDescriptor, type TraceEvent, TraceEventSchema } from '@stepglass/schema'
 import { expect } from 'vitest'
 import { z } from 'zod'
-import { createMemoryRecorder, defineTool } from '../../src/index.js'
+import { createMemoryRecorder, defineTool, MemoryStore } from '../../src/index.js'
 
 export const SESSION_ID = '0192f0a0-0000-7000-8000-000000000001'
 
@@ -69,6 +69,78 @@ export function getWidget(
 			const w = widgets.get(id)
 			if (!w) throw Object.assign(new Error(`no widget ${id}`), { code: 'not_found' })
 			return { ...w, owner: { email: 'owner@example.test', name: 'Owner' } }
+		},
+	})
+}
+
+export const setWidgetColorDescriptor: ToolDescriptor = {
+	schemaVersion: 1,
+	tool: 'set_widget_color',
+	version: 1,
+	kind: 'write',
+	title: 'Recolored {input.id} from {before.color} to {after.color}',
+	object: { type: 'widget', idPath: 'input.id', label: 'Widget {input.id}' },
+	fields: {
+		'before.color': { label: 'Old color', format: 'text' },
+		'after.color': { label: 'New color', format: 'text' },
+		'after.count': { label: 'Count', format: 'integer', computed: true },
+		'before.serial': { label: 'Serial', format: 'text', sensitive: true },
+		'after.serial': { label: 'Serial', format: 'text', sensitive: true },
+	},
+	verification: 'in_transaction',
+	capture: { input: 'full', output: 'full' },
+}
+
+export const seed = () =>
+	new MemoryStore({ widget: { 'W-1': { color: 'red', count: 3, serial: 'S-123' } } })
+
+/**
+ * Recolors a widget in a store the connector owns. `failAfterWrite` and `hangAfterWrite` throw
+ * or block after the write, to show that a rollback leaves no change and no evidence.
+ */
+export function setWidgetColor(
+	store: MemoryStore,
+	opts: { failAfterWrite?: boolean; hangAfterWrite?: boolean; badOutput?: boolean } = {},
+) {
+	return defineTool({
+		name: 'set_widget_color',
+		description: 'Set the color of a widget.',
+		input: z.object({ id: z.string(), color: z.string() }),
+		output: z.object({ id: z.string(), color: z.string() }),
+		descriptor: setWidgetColorDescriptor,
+		transaction: { store, read: (tx, id) => tx.get('widget', id) },
+		async run({ id, color }, { tx, signal }) {
+			const current = tx.get('widget', id)
+			if (!current) throw Object.assign(new Error(`no widget ${id}`), { code: 'not_found' })
+			tx.put('widget', id, { ...current.state, color, count: Number(current.state.count) + 1 })
+			if (opts.failAfterWrite) throw new Error('backend exploded')
+			if (opts.hangAfterWrite) {
+				await new Promise((_, reject) => signal?.addEventListener('abort', reject))
+			}
+			return opts.badOutput ? ({ id } as { id: string; color: string }) : { id, color }
+		},
+	})
+}
+
+/** Creates a widget; its ID comes from the output, so there is no before snapshot. */
+export function createWidget(store: MemoryStore) {
+	let next = 100
+	return defineTool({
+		name: 'create_widget',
+		description: 'Create a widget.',
+		input: z.object({ color: z.string() }),
+		descriptor: {
+			...setWidgetColorDescriptor,
+			tool: 'create_widget',
+			title: 'Created widget {output.id}',
+			object: { type: 'widget', idPath: 'output.id', label: 'Widget {output.id}' },
+			fields: { 'output.id': { label: 'Widget', format: 'id' } },
+		},
+		transaction: { store, read: (tx, id) => tx.get('widget', id) },
+		async run({ color }, { tx }) {
+			const id = `W-${next++}`
+			tx.put('widget', id, { color, count: 0 })
+			return { id }
 		},
 	})
 }
