@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/rules",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Lesson condition matcher shared by preview and runtime.",
+	"license": "Apache-2.0",
+	"type": "module"
+}

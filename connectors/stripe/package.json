@@ -1,0 +1,8 @@
+{
+	"name": "@stepglass/connector-stripe",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Stripe test-mode tools with a sandbox ledger.",
+	"license": "Apache-2.0",
+	"type": "module"
+}

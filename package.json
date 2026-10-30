@@ -16,12 +16,13 @@
 		"build": "turbo run build",
 		"dev": "turbo run dev",
 		"format": "biome check --write .",
-		"lint": "biome check .",
+		"lint": "biome check . && pnpm --filter @stepglass/tooling-boundaries check",
 		"test": "turbo run test",
 		"typecheck": "turbo run typecheck"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.4",
+		"@types/node": "^24.19.2",
 		"turbo": "^2.11.10",
 		"typescript": "^7.0.2",
 		"vitest": "^5.0.5"
