@@ -1,3 +1,5 @@
+export * from './bundle.js'
+export * from './changes.js'
 export * from './check.js'
 export * from './evaluate.js'
 export * from './id.js'

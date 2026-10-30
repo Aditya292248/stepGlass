@@ -1,4 +1,5 @@
 import type { Expr, JsonValue } from '@stepglass/schema'
+import { onlyChanged } from './changes.js'
 import { and3, not3, or3, type Truth, UNKNOWN } from './logic.js'
 import { readSnapshot, selectEvents } from './selectors.js'
 import { forbiddenAfterUnless, requiredBefore } from './sequence.js'
@@ -54,7 +55,7 @@ export function evaluate(e: Expr, ctx: EvalContext): Res {
 		case 'lte':
 		case 'gt':
 		case 'gte':
-			return compare(e.op, evaluate(e.left, ctx), evaluate(e.right, ctx))
+			return measure(e, compare(e.op, evaluate(e.left, ctx), evaluate(e.right, ctx)), ctx)
 		case 'and':
 		case 'or':
 			return junction(
@@ -77,7 +78,7 @@ export function evaluate(e: Expr, ctx: EvalContext): Res {
 		case 'forbidden_after_unless':
 			return forbiddenAfterUnless(e, ctx)
 		case 'only_changed':
-			return unknownRes('unsupported_operator', `"${e.op}" needs a recorded session.`)
+			return onlyChanged(e, ctx)
 		default:
 			return e satisfies never
 	}
@@ -188,6 +189,36 @@ export function compare(op: CompareOp, left: Res, right: Res): Res {
 	if (!isSafeInt(r)) return nonInteger(right, [left])
 	const ordered = { lt: l < r, lte: l <= r, gt: l > r, gte: l >= r }[op]
 	return res(ordered, [left, right])
+}
+
+type Comparison = Expr & { op: CompareOp }
+
+/**
+ * Attaches gauge numbers to a measured comparison: the left side is the value, the right side the
+ * limit, and each term is evaluated the same way. Terms are the parts the value is made of and
+ * are expected to add up to it. Numbers that are unknown or not safe integers give no gauge,
+ * because a gauge drawn from guessed numbers would be worse than none.
+ */
+function measure(e: Comparison, compared: Res, ctx: EvalContext): Res {
+	const m = e.measure
+	if (!m) return compared
+	const value = evaluate(e.left, ctx).value
+	const limit = evaluate(e.right, ctx).value
+	if (!isSafeInt(value) || !isSafeInt(limit)) return compared
+	const terms: { label: string; value: number }[] = []
+	for (const t of m.terms ?? []) {
+		const v = evaluate(t.value, ctx).value
+		if (!isSafeInt(v)) return compared
+		terms.push({ label: t.label, value: v })
+	}
+	const measurement = {
+		value,
+		limit,
+		unit: m.unit,
+		...(m.currency ? { currency: m.currency } : {}),
+		terms,
+	}
+	return res(compared.value, [compared], { measurement })
 }
 
 /**
