@@ -83,6 +83,11 @@ export const ActionStartedEventSchema = z
 			.optional(),
 		model: z.strictObject({ provider: z.string().min(1), name: z.string().min(1) }).optional(),
 		input: JsonValueSchema.optional(),
+		/**
+		 * Set when an idempotent retry was answered with an earlier action's result: nothing was
+		 * executed again, so checks and evidence belong to the action named here.
+		 */
+		replayOf: Uuidv7Schema.optional(),
 	})
 	.superRefine((e, ctx) => {
 		const ok = e.kind === 'tool' ? e.tool && !e.model : e.model && !e.tool
