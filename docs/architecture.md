@@ -79,6 +79,7 @@ How far a reviewer can trust a write is its **evidence label**, derived from its
 | ------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@stepglass/schema`             | `packages/schema`    | Zod contracts shared by every package: sessions, events, ingestion batches and acks, evidence, tool descriptors, checks, lessons; JSON Schema export |
 | `@stepglass/checks`             | `packages/checks`    | Pure, deterministic check engine over a session's events                                                                                             |
+| `@stepglass/toolkit`            | `packages/toolkit`   | Defines connector tools: records each call, captures before/after evidence in a transaction or by read-back, idempotent replay                       |
 | `@stepglass/api`                | `apps/api`           | Ingestion and session API on Fastify and PostgreSQL                                                                                                  |
 | `@stepglass/tooling-boundaries` | `tooling/boundaries` | Lint rule that keeps the core domain-agnostic                                                                                                        |
 

@@ -7,7 +7,7 @@ import {
 } from '@stepglass/schema'
 import { expect } from 'vitest'
 import { z } from 'zod'
-import { createMemoryRecorder, defineTool, MemoryStore } from '../../src/index.js'
+import { createMemoryRecorder, defineTool, descriptor, MemoryStore } from '../../src/index.js'
 
 export const SESSION_ID = '0192f0a0-0000-7000-8000-000000000001'
 
@@ -78,8 +78,7 @@ export function getWidget(
 	})
 }
 
-export const setWidgetColorDescriptor: ToolDescriptor = {
-	schemaVersion: 1,
+export const setWidgetColorDescriptor = descriptor({
 	tool: 'set_widget_color',
 	version: 1,
 	kind: 'write',
@@ -94,7 +93,7 @@ export const setWidgetColorDescriptor: ToolDescriptor = {
 	},
 	verification: 'in_transaction',
 	capture: { input: 'full', output: 'full' },
-}
+})
 
 export const seed = () =>
 	new MemoryStore({ widget: { 'W-1': { color: 'red', count: 3, serial: 'S-123' } } })
@@ -134,6 +133,7 @@ export function createWidget(store: MemoryStore) {
 		name: 'create_widget',
 		description: 'Create a widget.',
 		input: z.object({ color: z.string() }),
+		output: z.object({ id: z.string() }),
 		descriptor: {
 			...setWidgetColorDescriptor,
 			tool: 'create_widget',
@@ -190,11 +190,11 @@ export class WidgetApi {
 	}
 }
 
-export const paintWidgetDescriptor: ToolDescriptor = {
+export const paintWidgetDescriptor = descriptor({
 	...setWidgetColorDescriptor,
 	tool: 'paint_widget',
 	verification: 'read_back',
-}
+})
 
 /** Recolors a widget through {@link WidgetApi}, verified by reading it back. */
 export function paintWidget(api: WidgetApi, opts: { reported?: boolean } = {}) {
